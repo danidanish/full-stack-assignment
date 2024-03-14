@@ -20,11 +20,24 @@ const QUESTIONS = [{
         output: "5"
     }]
 }];
+function isAuthenticated(req,res,next){
+  if(req.session && req.session.email){
+    next();
+  }
+  else{
+    res.status(400).send('Kindly login!');
+  }
+}
+function isAdmin(req,res,next){
+  if(req.session && req.session.email=='admin'){
+    next();
+  }
+  else{
+    res.status(400).send('Only accessible by admin!');
+  }
+}
 
-
-const SUBMISSION = [
-
-]
+const SUBMISSION = [];
 
 app.post('/signup', function(req, res) {
   try 
@@ -65,42 +78,26 @@ app.post('/login', function(req, res) {
   else if(USERS.some(user=>user.email===email && user.password!==password)){
     res.status(401).send('Incorrect password! Try again')
   }
-  else if(USERS.some(user=>user.password===password &&user.email!==email)){
-    res.status(401).send('Incorrect email! Try again')
-  }
   else{
     res.status(401).send("User doesn't exist. Please sign up!")
   }
   } catch (error) {
     res.status(404).send(`Error: ${error}`)
   }
-  
-
-  // Check if the user with the given email exists in the USERS array
-  // Also ensure that the password is the same
-
-
-  // If the password is the same, return back 200 status code to the client
-  // Also send back a token (any random string will do for now)
-  // If the password is not the same, return back 401 status code to the client
-
 })
 
-app.get('/questions', function(req, res) {
-
-  //return the user all the questions in the QUESTIONS array
+app.get('/questions',isAuthenticated, function(req, res) {
   res.status(200).json(QUESTIONS)
 })
 
-app.get("/submissions", function(req, res) {
-   // return the users submissions for this problem
+app.get("/submissions",isAuthenticated, function(req, res) {
    res.status(200).json(SUBMISSION)
 });
+app.get('/getUsersList',isAdmin,(req,res)=>{
+ res.status(200).send(USERS);
+});
 
-
-app.post("/submissions", function(req, res) {
-   // let the user submit a problem, randomly accept or reject the solution
-   // Store the submission in the SUBMISSION array above
+app.post("/submissions",isAuthenticated, function(req, res) {
    if(req && req.body){
     const submissions = req.body.submissions
     const rand = Math.random()*10
@@ -115,23 +112,12 @@ app.post("/submissions", function(req, res) {
 });
 
 
-app.post('/newquestions',(req,res)=>{
-    // leaving as hard todos
-// Create a route that lets an admin add a new problem
-// ensure that only admins can do that.
+app.post('/newquestions',isAdmin,(req,res)=>{
 try {
-  if(USERS.length===0){
-    res.status(404).send('Please login to continue');
-  }
-  else if(req?.session?.email !== undefined && req?.session?.email==='admin'){
     const [{title,description,testCases:[{input,output}]}] = req.body;
     QUESTIONS.push({title,description,testCases:{input,output}});
     res.status(200).send('Question added successfully!');
-  }
-  else{
-    res.status(404).send('Only admins can add new questions');
-  }
-} catch (error) {
+  } catch (error) {
   res.status(400).send(`Error: ${error}`);
 }
 
